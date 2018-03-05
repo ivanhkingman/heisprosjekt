@@ -1,4 +1,5 @@
 #include "elev.h"
+#include "controll.h"
 #include "functions.h"
 #include <stdio.h>
 
@@ -10,13 +11,18 @@ int main() {
         return 1;
     }
 
+    struct Controller controllTest;
+      
+
     initialize();
+    wait(3);
     printf("Press STOP button to stop elevator and exit program.\n");
+
+    elev_set_motor_direction(DIRN_UP);
 
     while (1) {
     floorlights();
-    set_lights();
-    
+
     if (elev_get_floor_sensor_signal() == N_FLOORS - 1) {
         elev_set_motor_direction(DIRN_DOWN);
     } else if (elev_get_floor_sensor_signal() == 0) {

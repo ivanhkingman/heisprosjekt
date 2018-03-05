@@ -6,5 +6,8 @@ void initialize();
 //etasjelys
 void floorlights();
 
-//sørger for å skru på lys for knapper ved knappetrykk
-void set_lights();
+//funksjon som pauser kjøring av programmet
+void wait(int secs);
+
+//funskjon som registerer knappetrukk;
+void read_buttons();
