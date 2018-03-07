@@ -4,27 +4,98 @@
 #include "io.h"
 #include <stdio.h>
 
-controlltest.last_floor = 3;
 
-void read_buttons(){
-  for (int i = 1; i < 3; i++) {
-    for (int j = BUTTON_CALL_UP; j <= BUTTON_COMMAND; j++){
-      if(elev_get_button_signal(j, i)){
-        elev_set_button_lamp(j, i, 1);
-      }
-      controlltest.last_floor = 4;
+int upButtons[3];
+int downButtons[3];
+int commandButtons[4];
+
+enum states{
+  IDLE = 0,
+  UP = 1,
+  DOWN = 2,
+  WAIT = 3,
+  EMERGANCY = 4,
+};
+
+void statemachine(){
+  int a = IDLE;
+
+  switch (a) {
+    case IDLE:
+      //idleCase();
+      break;
+    case UP:
+      //upCase();
+    case DOWN:
+      //downCase();
+      break;
+    case WAIT:
+      //waitCase();
+      break;
+    case EMERGANCY:
+      //emergancyCase();
+      break;
+    default:
+      a = IDLE;
+      break;
+  }
+}
+
+void resetOrders(){
+  for(int i = 0; i < 3; i++){
+    upButtons[i] = 0;
+    downButtons[i] = 0;
+  }
+  for(int j = 0; j < N_FLOORS; j++){
+    commandButtons[j] = 0;
+  }
+}
+
+void checkButtons(){
+  //upbuttons
+  for(int i = 0; i < 3; i++){
+    if(elev_get_button_signal(0,i)){
+      upButtons[i] = 1;
     }
   }
-  if (elev_get_button_signal(BUTTON_CALL_UP,0)){
-    elev_set_button_lamp(BUTTON_CALL_UP,0,1);
+  //downButtons
+  for(int j = 1; j< 4; j++){
+    if(elev_get_button_signal(1,j)){
+      downButtons[j] = 1;
+    }
   }
-  else if (elev_get_button_signal(BUTTON_COMMAND,0)){
-    elev_set_button_lamp(BUTTON_COMMAND,0,1);
+  //commandbuttons
+  for(int k = 0; k < 4; k++){
+    if(elev_get_button_signal(2,k)){
+      commandButtons[k] = 1;
+    }
   }
-  else if (elev_get_button_signal(BUTTON_CALL_DOWN,3)){
-    elev_set_button_lamp(BUTTON_CALL_DOWN,3,1);
+}
+
+void lightControl(){
+  //upbuttons
+  for(int i = 0; i < 3; i++){
+      elev_set_button_lamp(0,i,upButtons[i]);
+      elev_set_button_lamp(1,i+1,downButtons[i]);
   }
-  else if (elev_get_button_signal(BUTTON_COMMAND,3)){
-    elev_set_button_lamp(BUTTON_COMMAND,3,1);
+  for(int k = 0; k < 4; k++){
+      elev_set_button_lamp(2,k,commandButtons[k]);
   }
+}
+
+/*void idleCase(){
+  elev_set_motor_direction(DIRN_STOP);
+}
+
+void upCase(){
+  elev_set_motor_direction(DIRN_UP);
+}
+
+void downCase(){
+  elev_set_motor_direction(DIRN_DOWN);
+}*/
+
+void emergancyCase(){
+  elev_set_motor_direction(DIRN_STOP);
+  //clearButtons();
 }

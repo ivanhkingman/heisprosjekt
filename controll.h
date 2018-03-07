@@ -4,14 +4,14 @@
 #include "io.h"
 #include <stdio.h>
 
-struct Floor {
-  int up;
-  int down;
-  int order;
-};
+int upButtons[3];
+int downButtons[3];
+int commandButtons[4];
 
-struct Controller {
-  struct Floor floors[N_FLOORS];
-  elev_motor_direction_t current_direction;
-  int last_floor;
-};
+void resetOrders();
+
+void checkButtons();
+
+void emergancyCase();
+
+void lightControl();

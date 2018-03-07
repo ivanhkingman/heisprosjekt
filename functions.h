@@ -9,5 +9,8 @@ void floorlights();
 //funksjon som pauser kjøring av programmet
 void wait(int secs);
 
-//funskjon som registerer knappetrukk;
-void read_buttons();
+//heis går kontinuerlig opp og ned
+void upAndDown();
+
+//stop for testing
+void testStop();

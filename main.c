@@ -5,36 +5,41 @@
 
 
 int main() {
-    // Initialize hardware
-    if (!elev_init()) {
-        printf("Unable to initialize elevator hardware!\n");
-        return 1;
-    }
-
-    struct Controller controllTest;
-      
 
     initialize();
+
     wait(3);
+
     printf("Press STOP button to stop elevator and exit program.\n");
 
     elev_set_motor_direction(DIRN_UP);
 
     while (1) {
-    floorlights();
 
-    if (elev_get_floor_sensor_signal() == N_FLOORS - 1) {
-        elev_set_motor_direction(DIRN_DOWN);
-    } else if (elev_get_floor_sensor_signal() == 0) {
-        elev_set_motor_direction(DIRN_UP);
-    }
+      floorlights();
+      lightControl();
 
-    // Stop elevator and exit program if the stop button is pressed
-    if (elev_get_stop_signal()) {
-        elev_set_motor_direction(DIRN_STOP);
-        break;
+      checkButtons();
+
+      upAndDown();
+
+      int b = elev_get_floor_sensor_signal();
+      if (b != -1){
+        if(b != 3){
+          upButtons[b] = 0;
+        }
+        if (b != 0){
+          downButtons[b] = 0;
+        }
+        commandButtons[b] = 0;
       }
+
+
+
+      testStop();
+
     }
 
   return 0;
+
 }
