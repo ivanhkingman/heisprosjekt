@@ -15,3 +15,34 @@ void checkButtons();
 void emergancyCase();
 
 void lightControl();
+
+int lastFloor();
+
+void goToEmergancy();
+
+void onAndOff(int last_floor);
+
+void downCase();
+
+void upCase();
+
+//initialiserer heisen
+void initialize();
+
+//etasjelys
+void floorlights();
+
+//funksjon som pauser kjøring av programmet
+void wait(int secs);
+
+//heis går kontinuerlig opp og ned
+void upAndDown();
+
+//stop for testing
+void testStop();
+
+void statemachine();
+
+int checkForUpReq();
+
+int checkForDownReq();

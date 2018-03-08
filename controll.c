@@ -1,45 +1,34 @@
 #include "elev.h"
 #include "functions.h"
 #include "channels.h"
+#include "controll.h"
 #include "io.h"
 #include <stdio.h>
+#include <time.h>
+
+#include "elev.h"
+#include "functions.h"
+#include "channels.h"
+#include "controll.h"
+#include "io.h"
+#include <stdio.h>
+#include <time.h>
 
 
 int upButtons[3];
 int downButtons[3];
 int commandButtons[4];
+int STATE;
+//int LAST_FLOOR;
+int DIR;
+
 
 enum states{
   IDLE = 0,
   UP = 1,
   DOWN = 2,
-  WAIT = 3,
-  EMERGANCY = 4,
+  EMERGANCY = 3,
 };
-
-void statemachine(){
-  int a = IDLE;
-
-  switch (a) {
-    case IDLE:
-      //idleCase();
-      break;
-    case UP:
-      //upCase();
-    case DOWN:
-      //downCase();
-      break;
-    case WAIT:
-      //waitCase();
-      break;
-    case EMERGANCY:
-      //emergancyCase();
-      break;
-    default:
-      a = IDLE;
-      break;
-  }
-}
 
 void resetOrders(){
   for(int i = 0; i < 3; i++){
@@ -61,7 +50,7 @@ void checkButtons(){
   //downButtons
   for(int j = 1; j< 4; j++){
     if(elev_get_button_signal(1,j)){
-      downButtons[j] = 1;
+      downButtons[j-1] = 1; //HER MÅ man ha -1 ?? right
     }
   }
   //commandbuttons
@@ -69,6 +58,15 @@ void checkButtons(){
     if(elev_get_button_signal(2,k)){
       commandButtons[k] = 1;
     }
+  }
+}
+
+void upAndDown(){
+  if (elev_get_floor_sensor_signal() == N_FLOORS - 1) {
+      elev_set_motor_direction(DIRN_DOWN);
+  }
+  else if (elev_get_floor_sensor_signal() == 0) {
+      elev_set_motor_direction(DIRN_UP);
   }
 }
 
@@ -83,19 +81,298 @@ void lightControl(){
   }
 }
 
-/*void idleCase(){
-  elev_set_motor_direction(DIRN_STOP);
+void goToEmergancy(){
+  if (elev_get_stop_signal()) {
+	  STATE = EMERGANCY;
+	  return;
+  }
 }
 
-void upCase(){
-  elev_set_motor_direction(DIRN_UP);
+/*int lastFloor(){
+	while (elev_get_floor_sensor_signal() != -1) {
+		LAST_FLOOR = elev_get_floor_sensor_signal();
+	}
+  return LAST_FLOOR;
+}
+*/
+
+void onAndOff(int last_floor){
+  elev_set_motor_direction(DIRN_STOP);
+  printf("Doors are open... \n");
+  elev_set_door_open_lamp(1);
+
+  if (STATE == UP){
+    printf("Gikk av\n");
+    if(last_floor != 3){
+      printf("denen loopen\n");
+      upButtons[last_floor] = 0;
+    }
+    commandButtons[last_floor] = 0;
+  }
+
+  if(STATE == DOWN){
+    if(last_floor != 0){
+      downButtons[last_floor-1] = 0;
+    }
+    commandButtons[last_floor] = 0;
+  }
+
+  int retTime = time(0) + 3;
+  while(time(0) < retTime){
+    checkButtons();
+    lightControl();
+    goToEmergancy();
+  }
+  elev_set_door_open_lamp(0);
+  printf("Doors are closed...\n");
+}
+
+void initialize() {
+  if (!elev_init()) {
+      printf("Unable to initialize elevator hardware!\n");
+      return;
+  }
+  printf("Initializing...\n");
+  STATE = IDLE;
+  resetOrders();
+
+  elev_set_motor_direction(DIRN_DOWN);
+  int uninitalized = 1;
+  while (uninitalized) {
+    if (elev_get_floor_sensor_signal() != -1) {
+      elev_set_motor_direction(DIRN_STOP);
+      uninitalized = 0;
+    }
+  }
+  printf("Elevator is initialized\n");
+}
+
+void floorlights(){
+  int floor_signal = elev_get_floor_sensor_signal();
+  if (floor_signal != -1) {
+    elev_set_floor_indicator(floor_signal);
+  }
+}
+
+void wait(int secs){
+  int retTime = time(0) + secs;
+  while(time(0) < retTime);
+}
+
+void testStop(){
+  if (elev_get_stop_signal()) {
+    elev_set_motor_direction(DIRN_STOP);
+    return;
+  }
+}
+
+int checkForUpReq(){
+  int goal = -1;
+  for (int i = 0; i < 4; i++ ){
+    if(downButtons[2]){ //Hvis ingen skal opp, men i 3. og noen i 4. skal ned
+      goal = 3;
+    }
+    else if (i != 3 && upButtons[i]){ //gjør ikke denne i 4 etasje
+      goal = i;
+    }
+    else if (commandButtons[i]){
+      goal = i;
+    }
+  }
+  return goal;
+}
+
+int checkForDownReq(){
+  int goal = -1;
+  for (int i = 0; i < 4; i++ ){
+    if(upButtons[0]){
+      goal = 0;
+    }
+    else if (i != 3 && downButtons[i]){ //gjør ikke denne i 4 etasje
+        goal = i+1;
+    }
+    else if (commandButtons[i]){
+      goal = i;
+    }
+  }
+  return goal;
+}
+
+/////////////////////
+//Functios
+
+
+
+
+
+
+//Cases
+////////////////////
+
+void emergancyCase(){
+	printf("Emergancy button pressed");
+	while (elev_get_stop_signal()) { //FAC test
+		elev_set_stop_lamp(1);
+		elev_set_motor_direction(DIRN_STOP);
+		resetOrders();
+		lightControl();
+		if (elev_get_floor_sensor_signal() != -1) {
+			elev_set_door_open_lamp(1);
+		}
+	}
+	elev_set_stop_lamp(0);
+	printf("%s %d" ,"Last visited before emergancy: ", elev_get_floor_sensor_signal()+1);
+  while(elev_get_floor_sensor_signal() == -1){
+    elev_set_motor_direction(DIRN_DOWN);
+  }
+  elev_set_motor_direction(DIRN_STOP);
+  printf("%s %d" ,"Elevator up and running at floor\n", elev_get_floor_sensor_signal()+1);
+
+	STATE = IDLE;
+}
+
+void idleCase(){
+  //printf("IDLE\n" );
+	elev_set_door_open_lamp(0);
+	elev_set_motor_direction(DIRN_STOP);
+  goToEmergancy();
+
+
+	 for (int i = 0; i < 3; i++) {
+		 if (upButtons[i]){
+       if(i < elev_get_floor_sensor_signal()){
+         STATE = DOWN;
+         return;
+       }
+			 STATE = UP;
+			 return; //Sikrer at man går ut hvis man bytter state
+		}
+		if (downButtons[i]) {
+      if(i < elev_get_floor_sensor_signal()-1){ //Etasjen i istedt for balaba
+			  STATE = DOWN;
+        return;
+      }
+      STATE = UP;
+			return;
+		}
+	 }
+
+ for (int j = 0; j < 3; j++) {
+	  if (commandButtons[j] && elev_get_floor_sensor_signal() < j) {
+		  STATE = UP;
+		  return;
+	  }
+	  else if (commandButtons[j] && elev_get_floor_sensor_signal() < j) {
+		  STATE = DOWN;
+		  return;
+	  }
+  }
 }
 
 void downCase(){
-  elev_set_motor_direction(DIRN_DOWN);
-}*/
+  printf("DOWN\n" );
+  int goal;
+  int check = 0;
+  int check2 = 0;
 
-void emergancyCase(){
-  elev_set_motor_direction(DIRN_STOP);
-  //clearButtons();
+
+  elev_set_motor_direction(DIRN_DOWN);
+  goToEmergancy();
+  goal = checkForDownReq();
+
+
+  if(goal == -1){
+
+    STATE = IDLE;
+    return;
+  }
+
+  //printf("%d", LAST_FLOOR );
+
+  if(elev_get_floor_sensor_signal() != -1){
+    int currentFloor = elev_get_floor_sensor_signal();
+    if (currentFloor != 0 && (downButtons[currentFloor-1])){
+      onAndOff(currentFloor);
+    }
+    if(commandButtons[currentFloor]){
+      onAndOff(currentFloor);
+    }
+  }
+
+  if(goal != 0){
+    if(downButtons[goal-1] == 0){
+      check = 1;
+    }
+  }
+
+  if(commandButtons[goal] == 0){
+    check2 = 1;
+  }
+
+  if(check && check2){
+    STATE = IDLE;
+  }
+}
+
+void upCase(){
+  int goal;
+  int check = 0;
+  int check2 = 0;
+
+
+  elev_set_motor_direction(DIRN_UP);
+  goToEmergancy();
+  goal = checkForUpReq();
+
+  if(goal == -1){
+    STATE = IDLE;
+    return;
+  }
+
+  //printf("%d", LAST_FLOOR );
+
+  if(elev_get_floor_sensor_signal() != -1){
+    int currentFloor = elev_get_floor_sensor_signal();
+    if (currentFloor != 3 && (upButtons[currentFloor])){
+      onAndOff(currentFloor);
+    }
+    if(commandButtons[currentFloor]){
+      onAndOff(currentFloor);
+    }
+  }
+
+  if(goal != 3){
+    if(upButtons[goal] == 0){
+      check = 1;
+    }
+  }
+
+  if(commandButtons[goal] == 0){
+    check2 = 1;
+  }
+
+  if(check && check2){
+    STATE = IDLE;
+  }
+}
+
+void statemachine(){
+
+  switch (STATE) {
+    case IDLE:
+      idleCase();
+      break;
+    case UP:
+      upCase();
+      break;
+    case DOWN:
+      downCase();
+      break;
+    case EMERGANCY:
+      emergancyCase();
+      break;
+    default:
+      STATE = IDLE;
+      break;
+  }
 }
