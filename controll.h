@@ -46,3 +46,23 @@ void statemachine();
 int checkForUpReq();
 
 int checkForDownReq();
+
+int downPriorityHandeled(int currentFloor);
+
+int upPriorityHandeled(int currentFloor);
+
+int findEndgoalUp();
+
+int findEndgoalDown();
+
+int noButtons();
+
+int noCommandButtons();
+
+int noUpButtons();
+
+int noDownButtons();
+
+int noDownReqAbove(int currentFloor);
+
+int noUpReqBelow(int currentFloor);

@@ -7,8 +7,6 @@ int main() {
 
     initialize();
 
-    wait(3);
-
     printf("Press STOP button to stop elevator and exit program.\n");
 
     while (1) {

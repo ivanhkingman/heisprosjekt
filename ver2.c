@@ -1,10 +1,18 @@
 #include "elev.h"
+#include "functions.h"
 #include "channels.h"
 #include "controll.h"
 #include "io.h"
 #include <stdio.h>
 #include <time.h>
 
+#include "elev.h"
+#include "functions.h"
+#include "channels.h"
+#include "controll.h"
+#include "io.h"
+#include <stdio.h>
+#include <time.h>
 
 
 int upButtons[3];
@@ -190,103 +198,6 @@ int checkForDownReq(){
   return goal;
 }
 
-int downPriorityHandeled(int currentFloor){
-  for(int i = currentFloor; i >= 0; i--){
-    if((i!=0)&&(downButtons[i-1] == 1)) {
-      printf("Down request pending\n");
-      return 0;
-    }
-    if((i != 3) && (upButtons[i] == 1)){
-      printf("Still a dude under\n");
-      return 0;
-    }
-    if (commandButtons[i] == 1){
-      printf("Command request pending\n");
-      return 0;
-    }
-  }
-  printf("All down priorities handeled\n");
-  return 1;
-}
-
-int upPriorityHandeled(int currentFloor){
-  for(int i = currentFloor; i < N_FLOORS; i++){
-    if((i!=3)&&(upButtons[i]==1)){
-      printf("Up request pending\n");
-      return 0;
-    }
-    /*if((i != 0) && downButtons[i-1]){
-      printf("Still dude over\n");
-      return 2;
-    }*/
-    if (commandButtons[i] == 1){
-      printf("Command request pending\n");
-      return 0;
-    }
-  }
-  return 1;
-}
-
-int noButtons(){
-  //først upbuttons
-  for (int i = 0; i < 3; i++){
-    if ((upButtons[i] == 1)||(downButtons[i] == 1)){
-      return 0;
-    }
-  for (int i = 0; i < 4; i++){
-    if (commandButtons[i] == 1){
-      return 0;
-    }
-  }
-  }
-  return 1;
-}
-
-int noCommandButtons(){
-  for (int i = 0; i < N_FLOORS; i++){
-    if (commandButtons[i] == 1){
-      return 0;
-    }
-  }
-  return 1;
-}
-
-int noUpButtons(){
-  for (int i = 0; i<3; i++){
-    if (upButtons[i] == 1){
-      return 0;
-    }
-  }
-  return 1;
-}
-
-int noDownButtons(){
-  for (int i = 0; i<3; i++){
-    if (downButtons[i] == 1){
-      return 0;
-    }
-  }
-  return 1;
-}
-
-int noDownReqAbove(int currentFloor){
-  for (int i = currentFloor+1; i < N_FLOORS; i++){
-    if (downButtons[i]){
-      return 0;
-    }
-  }
-  return 1;
-}
-
-int noUpReqBelow(int currentFloor){
-  for (int i = currentFloor-1; i >= 0; i--){
-    if (upButtons[i]){
-      return 0;
-    }
-  }
-  return 1;
-}
-
 /////////////////////
 //Functios
 
@@ -328,30 +239,22 @@ void idleCase(){
 
 
 	 for (int i = 0; i < 3; i++) {
-		 if (upButtons[i]){
-       if(i < elev_get_floor_sensor_signal()){
-         STATE = DOWN;
-         return;
-       }
+     if (upButtons[i]){
 			 STATE = UP;
-			 return; //Sikrer at man går ut hvis man bytter state
-		}
-		if (downButtons[i]) {
-      if(i < elev_get_floor_sensor_signal()-1){ //Etasjen i istedt for balaba
+			 return;
+     }
+    else if (downButtons[i]){
 			  STATE = DOWN;
         return;
-      }
-      STATE = UP;
-			return;
-		}
+    }
 	 }
 
  for (int j = 0; j < 4; j++) {
-	  if (commandButtons[j] && elev_get_floor_sensor_signal() < j) {
+	  if ((commandButtons[j]) && (elev_get_floor_sensor_signal() < j)) {
 		  STATE = UP;
 		  return;
 	  }
-	  else if (commandButtons[j] && elev_get_floor_sensor_signal() > j) {
+	  else if ((commandButtons[j]) && (elev_get_floor_sensor_signal() > j)) {
 		  STATE = DOWN;
 		  return;
 	  }
@@ -360,70 +263,103 @@ void idleCase(){
 
 void downCase(){
   elev_set_motor_direction(DIRN_DOWN);
+  printf("var her");
   goToEmergancy();
+  int upgoald = -1;
+  int downgoald = -1;
+  int commandgoald = -1;
 
+  
   if(elev_get_floor_sensor_signal() != -1){
-    int currentFloor = elev_get_floor_sensor_signal();
-    if (currentFloor != 0 && (downButtons[currentFloor-1])){ //stopper for downbuttons
-      onAndOff(currentFloor);
+    for(int i = elev_get_floor_sensor_signal(); i <= 0 ; i--){
+      if((i != 3) && (upButtons[i])){
+      upgoald = i;
+      }
+      if((i != 0) && (downButtons[i-1])){
+      downgoald = i;
+      }
     }
-    if(commandButtons[currentFloor]){ //Stopper for commandButtons
-      onAndOff(currentFloor);
-      if(downPriorityHandeled(currentFloor)){
+    for (int j = elev_get_floor_sensor_signal(); j <= 0; j--){
+      if(commandButtons[j]){
+        commandgoald = j;
+        printf("yes");
+      }
+    }
+
+  //betjener opp og command goals
+
+    if ((elev_get_floor_sensor_signal() != 0 && (downButtons[elev_get_floor_sensor_signal()-1])) || commandButtons[elev_get_floor_sensor_signal()]) {
+      onAndOff(elev_get_floor_sensor_signal());
+    }
+
+
+    if((downgoald == -1) && (commandgoald == -1) && (upgoald != 1)){
+      if(elev_get_floor_sensor_signal() == upgoald){
         STATE = UP;
         return;
       }
     }
-    if ((upButtons[currentFloor] && (currentFloor != 3)) &&  downPriorityHandeled(currentFloor)){
-      STATE = UP;
-      return;
-    }
-    if (downPriorityHandeled(currentFloor) && !noCommandButtons()){
-      STATE = UP;
-      return;
-    }
-  }
 
-  if(noButtons()){
-    STATE = IDLE;
-    return;
+    if((upgoald == -1) && (commandgoald == -1) && (downgoald == -1)){
+      if(elev_get_floor_sensor_signal() == downgoald){
+        STATE = IDLE;
+        return;
+      }
+    }
   }
 }
 
 void upCase(){
   elev_set_motor_direction(DIRN_UP);
   goToEmergancy();
+  int currentFlooru = -1;
+  int upgoalu = -1;
+  int downgoalu = -1;
+  int commandgoalu = -1;
 
   if(elev_get_floor_sensor_signal() != -1){
-    int currentFloor = elev_get_floor_sensor_signal();
-    if (currentFloor != 3 && (upButtons[currentFloor])){
-      onAndOff(currentFloor);
-    }
-    if(commandButtons[currentFloor]){
-      onAndOff(currentFloor);
-      if(upPriorityHandeled(currentFloor)){
-        STATE = DOWN;
-        return;
+    currentFlooru = elev_get_floor_sensor_signal();
+  }
 
-      }
+  for(int i = currentFlooru; i < 3; i++){
+    if(upButtons[i]){
+      upgoalu = i;
     }
+    if((i != 0) && (downButtons[i-1])){
+      downgoalu = i;
+    }
+  }
 
-    if((downButtons[currentFloor-1] && (currentFloor != 0)) && (upPriorityHandeled(currentFloor))) {
-      if (!noDownReqAbove(currentFloor)){
-        return;
-      }
-      STATE = DOWN;
-      return;
+  for (int j = currentFlooru; j < N_FLOORS; j++){
+    if(commandButtons[j]){
+      commandgoalu = j;
     }
-    if(upPriorityHandeled(currentFloor) && !noCommandButtons()){
+  }
+  //betjener opp og command goals
+
+  if(elev_get_floor_sensor_signal() != -1){
+    if ((currentFlooru != 3 && (upButtons[currentFlooru])) || commandButtons[currentFlooru]) {
+      onAndOff(currentFlooru);
+    }
+  }
+
+  if((upgoalu == -1) && (commandgoalu == -1) && (downgoalu != -1)){
+    if(currentFlooru == downgoalu){
       STATE = DOWN;
       return;
     }
   }
 
-  if (noButtons()){
-    STATE = IDLE;
+  if((upgoalu == -1) && (commandgoalu == -1) && (downgoalu == -1)){
+    if(currentFlooru == downgoalu){
+      STATE = IDLE;
+      return;
+    }
   }
+
+
+
+
 }
 
 void statemachine(){
@@ -446,3 +382,4 @@ void statemachine(){
       break;
   }
 }
+
